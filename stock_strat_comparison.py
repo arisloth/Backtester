@@ -192,7 +192,7 @@ def print_summary(results, bh_result, starting_capital, ticker, stop_loss_pct):
 # ── Plotting ───────────────────────────────────────────────────────────────────
 
 def plot_comparison(df, results, bh_result, ticker, stop_loss_pct, starting_capital):
-    fig = plt.figure(figsize=(16, 20))
+    fig = plt.figure(figsize=(16, 12))
     fig.suptitle(
         f"{ticker} — Strategy Comparison  |  "
         f"Capital: ${starting_capital:,.0f}  |  Stop Loss: {stop_loss_pct*100:.1f}%",
@@ -208,7 +208,9 @@ def plot_comparison(df, results, bh_result, ticker, stop_loss_pct, starting_capi
     }
 
     # ── Panel 1: Portfolio Value in Dollars ──
-    ax1 = fig.add_subplot(4, 1, 1)
+    import matplotlib.gridspec as gridspec
+    gs = gridspec.GridSpec(2, 3, figure=fig, height_ratios=[3, 1.5], hspace=0.4)
+    ax1 = fig.add_subplot(gs[0, :])
     ax1.plot(bh_result["index"], bh_result["portfolio_value"],
              label=f"Buy & Hold (${bh_result['final_value']:,.0f})",
              color=colors["Buy & Hold"], linewidth=1.5, linestyle="--")
@@ -222,51 +224,11 @@ def plot_comparison(df, results, bh_result, ticker, stop_loss_pct, starting_capi
     ax1.set_ylabel("Portfolio Value ($)")
     ax1.legend(fontsize=8)
     ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    ax1.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+    plt.setp(ax1.xaxis.get_majorticklabels(), rotation=30, ha='right')
     ax1.grid(alpha=0.3)
 
-    # ── Panel 2: Price + Indicators ──
-    ax2 = fig.add_subplot(4, 1, 2)
-    ax2.plot(df.index, df["price"],    label="Price",    color="#1f77b4", linewidth=1.2)
-    ax2.plot(df.index, df["BB_upper"], label="BB Upper", color="#9467bd", linewidth=0.8, linestyle="--")
-    ax2.plot(df.index, df["BB_lower"], label="BB Lower", color="#9467bd", linewidth=0.8, linestyle="--")
-    ax2.fill_between(df.index, df["BB_lower"], df["BB_upper"], alpha=0.08, color="#9467bd")
-    ax2.plot(df.index, df["SMA50"],    label="SMA 50",   color="#2ca02c", linewidth=0.9, linestyle="--")
-    ax2.plot(df.index, df["SMA200"],   label="SMA 200",  color="#d62728", linewidth=0.9, linestyle="--")
-    ax2.set_title("Price with Bollinger Bands & SMAs")
-    ax2.set_ylabel("Price (USD)")
-    ax2.legend(fontsize=8, loc="upper left")
-    ax2.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
-    ax2.grid(alpha=0.3)
-
-    # ── Panel 3: RSI + MACD ──
-    ax3 = fig.add_subplot(4, 2, 5)
-    ax3.plot(df.index, df["RSI"], color="#ff7f0e", linewidth=1)
-    ax3.axhline(70, color="#d62728", linewidth=0.8, linestyle="--", label="Overbought (70)")
-    ax3.axhline(30, color="#2ca02c", linewidth=0.8, linestyle="--", label="Oversold (30)")
-    ax3.fill_between(df.index, df["RSI"], 30, where=df["RSI"] < 30, alpha=0.3, color="#2ca02c")
-    ax3.fill_between(df.index, df["RSI"], 70, where=df["RSI"] > 70, alpha=0.3, color="#d62728")
-    ax3.set_title("RSI (14)")
-    ax3.set_ylabel("RSI")
-    ax3.set_ylim(0, 100)
-    ax3.legend(fontsize=8)
-    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
-    ax3.grid(alpha=0.3)
-
-    ax4 = fig.add_subplot(4, 2, 6)
-    ax4.plot(df.index, df["MACD"],        label="MACD",   color="#e377c2", linewidth=1)
-    ax4.plot(df.index, df["MACD_signal"], label="Signal", color="#7f7f7f", linewidth=1, linestyle="--")
-    ax4.fill_between(df.index, df["MACD"] - df["MACD_signal"], 0,
-                     where=(df["MACD"] > df["MACD_signal"]), alpha=0.3, color="#2ca02c")
-    ax4.fill_between(df.index, df["MACD"] - df["MACD_signal"], 0,
-                     where=(df["MACD"] < df["MACD_signal"]), alpha=0.3, color="#d62728")
-    ax4.axhline(0, color="gray", linewidth=0.7)
-    ax4.set_title("MACD (12/26/9)")
-    ax4.set_ylabel("MACD")
-    ax4.legend(fontsize=8)
-    ax4.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
-    ax4.grid(alpha=0.3)
-
-    # ── Panel 4: Bar Charts ──
+    # ── Panel 2: Bar Charts ──
     all_results  = [bh_result] + results
     names        = [r["name"] for r in all_results]
     bar_colors   = [colors.get(n, "#aec7e8") for n in names]
@@ -274,7 +236,7 @@ def plot_comparison(df, results, bh_result, ticker, stop_loss_pct, starting_capi
     ann_returns  = [r["ann_return"] * 100 for r in all_results]
     sharpes      = [r["sharpe"] for r in all_results]
 
-    ax5 = fig.add_subplot(4, 3, 10)
+    ax5 = fig.add_subplot(gs[1, 0])
     bars = ax5.bar(names, final_values, color=bar_colors, edgecolor="white")
     ax5.axhline(starting_capital, color="gray", linewidth=0.8, linestyle="--")
     ax5.set_title("Final Portfolio Value ($)")
@@ -285,7 +247,7 @@ def plot_comparison(df, results, bh_result, ticker, stop_loss_pct, starting_capi
                  f"${val:,.0f}", ha="center", va="bottom", fontsize=7)
     ax5.grid(axis="y", alpha=0.3)
 
-    ax6 = fig.add_subplot(4, 3, 11)
+    ax6 = fig.add_subplot(gs[1, 1])
     bars = ax6.bar(names, ann_returns, color=bar_colors, edgecolor="white")
     ax6.axhline(0, color="gray", linewidth=0.7)
     ax6.set_title("Annualized Return (%)")
@@ -297,7 +259,7 @@ def plot_comparison(df, results, bh_result, ticker, stop_loss_pct, starting_capi
                  f"{val:.1f}%", ha="center", va="bottom", fontsize=7)
     ax6.grid(axis="y", alpha=0.3)
 
-    ax7 = fig.add_subplot(4, 3, 12)
+    ax7 = fig.add_subplot(gs[1, 2])
     bars = ax7.bar(names, sharpes, color=bar_colors, edgecolor="white")
     ax7.axhline(0, color="gray", linewidth=0.7)
     ax7.set_title("Sharpe Ratio")
@@ -309,7 +271,6 @@ def plot_comparison(df, results, bh_result, ticker, stop_loss_pct, starting_capi
                  f"{val:.2f}", ha="center", va="bottom", fontsize=7)
     ax7.grid(axis="y", alpha=0.3)
 
-    plt.tight_layout()
     fname = f"strategy_comparison_{ticker.replace('=', '')}.png"
     plt.savefig(fname, dpi=150, bbox_inches="tight")
     print(f"\nChart saved to {fname}")
